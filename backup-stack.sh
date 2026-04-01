@@ -4,10 +4,16 @@ set -e
 
 SOURCE_DIR="/opt/mediastack"
 BACKUP_TMP="/tmp/mediastack_backup"
-REMOTE_USER="admin"
-REMOTE_HOST="192.168.1.100" 
-REMOTE_PATH="/volume1/backups/mediastack"
-RETENTION_DAYS=7
+
+# Source environment variables if available
+if [ -f "$SOURCE_DIR/.env" ]; then
+  source "$SOURCE_DIR/.env"
+fi
+
+REMOTE_USER="${BACKUP_REMOTE_USER:-admin}"
+REMOTE_HOST="${BACKUP_REMOTE_HOST:-192.168.1.100}"
+REMOTE_PATH="${BACKUP_REMOTE_PATH:-/volume1/backups/mediastack}"
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 ARCHIVE_NAME="mediastack_state_${TIMESTAMP}.tar.gz"

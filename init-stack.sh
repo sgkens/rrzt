@@ -48,9 +48,9 @@ link_app() {
   local app=$1
   local url=$2
   local key=$3
-  local existing=$(curl -s -X GET "$PROWLARR_URL/applications" -H "X-Api-Key: $PROWLARR_API_KEY")
+  local existing=$(docker exec prowlarr curl -s -X GET "$PROWLARR_URL/applications" -H "X-Api-Key: $PROWLARR_API_KEY")
   if echo "$existing" | grep -q "\"name\": \"$app\""; then return; fi
-  curl -s -X POST "$PROWLARR_URL/applications" -H "X-Api-Key: $PROWLARR_API_KEY" -H "Content-Type: application/json" -d '{ "appProfileId": 1, "name": "'"$app"'", "implementation": "'"$app"'", "configContract": "'"${app}Settings"'", "fields": [ { "name": "prowlarrUrl", "value": "http://prowlarr:9696" }, { "name": "baseUrl", "value": "'"$url"'" }, { "name": "apiKey", "value": "'"$key"'" } ], "syncLevel": "fullSync" }' > /dev/null
+  docker exec prowlarr curl -s -X POST "$PROWLARR_URL/applications" -H "X-Api-Key: $PROWLARR_API_KEY" -H "Content-Type: application/json" -d '{ "appProfileId": 1, "name": "'"$app"'", "implementation": "'"$app"'", "configContract": "'"${app}Settings"'", "fields": [ { "name": "prowlarrUrl", "value": "http://prowlarr:9696" }, { "name": "baseUrl", "value": "'"$url"'" }, { "name": "apiKey", "value": "'"$key"'" } ], "syncLevel": "fullSync" }' > /dev/null
 }
 
 link_app "Radarr" "http://radarr:7878" "$RADARR_API_KEY"
@@ -58,9 +58,9 @@ link_app "Sonarr" "http://sonarr:8989" "$SONARR_API_KEY"
 link_app "Lidarr" "http://lidarr:8686" "$LIDARR_API_KEY"
 link_app "Readarr" "http://readarr:8787" "$READARR_API_KEY"
 
-flaresolverr_check=$(curl -s -X GET "$PROWLARR_URL/indexerproxy" -H "X-Api-Key: $PROWLARR_API_KEY")
+flaresolverr_check=$(docker exec prowlarr curl -s -X GET "$PROWLARR_URL/indexerproxy" -H "X-Api-Key: $PROWLARR_API_KEY")
 if ! echo "$flaresolverr_check" | grep -q "\"name\": \"FlareSolverr\""; then
-  curl -s -X POST "$PROWLARR_URL/indexerproxy" -H "X-Api-Key: $PROWLARR_API_KEY" -H "Content-Type: application/json" -d '{ "name": "FlareSolverr", "implementation": "FlareSolverrProxy", "configContract": "FlareSolverrProxySettings", "fields": [ { "name": "host", "value": "http://flaresolverr:8191" } ], "tags": [] }' > /dev/null
+  docker exec prowlarr curl -s -X POST "$PROWLARR_URL/indexerproxy" -H "X-Api-Key: $PROWLARR_API_KEY" -H "Content-Type: application/json" -d '{ "name": "FlareSolverr", "implementation": "FlareSolverrProxy", "configContract": "FlareSolverrProxySettings", "fields": [ { "name": "host", "value": "http://flaresolverr:8191" } ], "tags": [] }' > /dev/null
 fi
 
 link_qbittorrent() {
@@ -68,14 +68,14 @@ link_qbittorrent() {
   local base_url=$2
   local api_key=$3
   local category=$4
-  local existing_clients=$(curl -s -X GET "$base_url/api/v3/downloadclient" -H "X-Api-Key: $api_key")
+  local existing_clients=$(docker exec prowlarr curl -s -X GET "$base_url/api/v3/downloadclient" -H "X-Api-Key: $api_key")
   if echo "$existing_clients" | grep -q "\"name\": \"qBittorrent\""; then return; fi
   local cat_payload=""
   [ "$app_name" == "Radarr" ] && cat_payload='{ "name": "movieCategory", "value": "'"$category"'" }'
   [ "$app_name" == "Sonarr" ] && cat_payload='{ "name": "tvCategory", "value": "'"$category"'" }'
   [ "$app_name" == "Lidarr" ] && cat_payload='{ "name": "musicCategory", "value": "'"$category"'" }'
   [ "$app_name" == "Readarr" ] && cat_payload='{ "name": "bookCategory", "value": "'"$category"'" }'
-  curl -s -X POST "$base_url/api/v3/downloadclient" -H "X-Api-Key: $api_key" -H "Content-Type: application/json" -d '{ "enable": true, "name": "qBittorrent", "implementation": "QBittorrent", "configContract": "QBittorrentSettings", "fields": [ { "name": "host", "value": "qbittorrent" }, { "name": "port", "value": 8080 }, { "name": "useSsl", "value": false }, { "name": "username", "value": "admin" }, { "name": "password", "value": "adminadmin" }, '"$cat_payload"' ] }' > /dev/null
+  docker exec prowlarr curl -s -X POST "$base_url/api/v3/downloadclient" -H "X-Api-Key: $api_key" -H "Content-Type: application/json" -d '{ "enable": true, "name": "qBittorrent", "implementation": "QBittorrent", "configContract": "QBittorrentSettings", "fields": [ { "name": "host", "value": "qbittorrent" }, { "name": "port", "value": 8080 }, { "name": "useSsl", "value": false }, { "name": "username", "value": "admin" }, { "name": "password", "value": "adminadmin" }, '"$cat_payload"' ] }' > /dev/null
 }
 
 add_root_folder() {
@@ -83,9 +83,9 @@ add_root_folder() {
   local base_url=$2
   local api_key=$3
   local folder_path=$4
-  local existing_folders=$(curl -s -X GET "$base_url/api/v3/rootfolder" -H "X-Api-Key: $api_key")
+  local existing_folders=$(docker exec prowlarr curl -s -X GET "$base_url/api/v3/rootfolder" -H "X-Api-Key: $api_key")
   if echo "$existing_folders" | grep -q "\"path\": \"$folder_path\""; then return; fi
-  curl -s -X POST "$base_url/api/v3/rootfolder" -H "X-Api-Key: $api_key" -H "Content-Type: application/json" -d '{ "path": "'"$folder_path"'" }' > /dev/null
+  docker exec prowlarr curl -s -X POST "$base_url/api/v3/rootfolder" -H "X-Api-Key: $api_key" -H "Content-Type: application/json" -d '{ "path": "'"$folder_path"'" }' > /dev/null
 }
 
 echo "[INFO] Parsing libraries.json for automated API routing..."
