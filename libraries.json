@@ -1,0 +1,47 @@
+[
+    {
+        "Tags": [
+            "radarr",
+            "bazarr",
+            "plex",
+            "jellyfin",
+            "emby",
+            "fileflows"
+        ],
+        "Source": "/mnt/disk1/movies",
+        "Target": "/data/media/movies",
+        "Category": "movies"
+    },
+    {
+        "Tags": [
+            "sonarr",
+            "bazarr",
+            "plex",
+            "jellyfin",
+            "emby",
+            "fileflows"
+        ],
+        "Source": "/mnt/nas_share/television",
+        "Target": "/data/media/tv",
+        "Category": "tv"
+    },
+    {
+        "Tags": [
+            "lidarr",
+            "plex",
+            "jellyfin",
+            "emby"
+        ],
+        "Source": "/mnt/usb_drive/audio",
+        "Target": "/data/media/music",
+        "Category": "music"
+    },
+    {
+        "Tags": [
+            "readarr"
+        ],
+        "Source": "/mnt/disk2/library",
+        "Target": "/data/media/books",
+        "Category": "books"
+    }
+]

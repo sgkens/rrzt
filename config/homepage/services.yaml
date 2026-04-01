@@ -1,0 +1,63 @@
+- Media Consumption:
+    - Seerr:
+        icon: overseerr.png
+        href: https://requests.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+    - Plex:
+        icon: plex.png
+        href: https://plex.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+
+- Automation & Acquisition:
+    - Radarr:
+        icon: radarr.png
+        href: http://<your_local_ip>:7878
+        widget: { type: radarr, url: http://radarr:7878, key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}" }
+    - Sonarr:
+        icon: sonarr.png
+        href: http://<your_local_ip>:8989
+        widget: { type: sonarr, url: http://sonarr:8989, key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}" }
+    - Lidarr:
+        icon: lidarr.png
+        href: http://<your_local_ip>:8686
+        widget: { type: lidarr, url: http://lidarr:8686, key: "{{HOMEPAGE_VAR_LIDARR_API_KEY}}" }
+    - Readarr:
+        icon: readarr.png
+        href: http://<your_local_ip>:8787
+        widget: { type: readarr, url: http://readarr:8787, key: "{{HOMEPAGE_VAR_READARR_API_KEY}}" }
+
+- Indexers & Parsing:
+    - Prowlarr:
+        icon: prowlarr.png
+        href: http://<your_local_ip>:9696
+        widget: { type: prowlarr, url: http://prowlarr:9696, key: "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}" }
+    - Bazarr:
+        icon: bazarr.png
+        href: http://<your_local_ip>:6767
+        widget: { type: bazarr, url: http://bazarr:6767, key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}" }
+
+- Downloads & Processing:
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: http://<your_local_ip>:8080
+        widget: { type: qbittorrent, url: http://qbittorrent:8080, username: admin, password: adminadmin }
+    - FileFlows:
+        icon: fileflows.png
+        href: https://process.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+    - Unpackerr:
+        icon: unpackerr.png
+        description: Automated Extraction (No UI)
+
+- Telemetry & Infrastructure:
+    - Tautulli:
+        icon: tautulli.png
+        href: https://stats.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+        widget: { type: tautulli, url: http://tautulli:8181, key: "{{HOMEPAGE_VAR_TAUTULLI_API_KEY}}" }
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+    - Dozzle:
+        icon: dozzle.png
+        href: https://logs.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+    - AdGuard Home:
+        icon: adguard-home.png
+        href: https://dns.{{HOMEPAGE_VAR_DOMAIN_NAME}}
+        widget: { type: adguard, url: http://adguardhome:80, username: admin, password: your_password }

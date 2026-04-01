@@ -1,0 +1,616 @@
+x-environment: &default-env
+  PUID: ${PUID}
+  PGID: ${PGID}
+  TZ: ${TZ}
+
+x-healthcheck: &arr-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+x-deploy-light: &deploy-light
+  resources:
+    limits:
+      cpus: '0.5'
+      memory: 1G
+    reservations:
+      cpus: '0.1'
+      memory: 256M
+
+x-deploy-heavy: &deploy-heavy
+  resources:
+    limits:
+      cpus: '4.0'
+      memory: 4G
+    reservations:
+      cpus: '0.5'
+      memory: 1G
+
+networks:
+  mediastack_net:
+    driver: bridge
+    name: mediastack_net
+
+volumes:
+  traefik_data:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/traefik }
+  adguard_work:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/adguard/work }
+  adguard_conf:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/adguard/conf }
+  grafana_data:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/grafana }
+  prometheus_data:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/prometheus }
+  plex_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/plex }
+  jellyfin_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/jellyfin }
+  emby_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/emby }
+  tautulli_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/tautulli }
+  qbittorrent_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/qbittorrent }
+  prowlarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/prowlarr }
+  radarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/radarr }
+  sonarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/sonarr }
+  lidarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/lidarr }
+  readarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/readarr }
+  bazarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/bazarr }
+  seerr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/seerr }
+  fileflows_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/fileflows }
+  recyclarr_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/recyclarr }
+  homepage_config:
+    driver: local
+    driver_opts: { type: none, o: bind, device: /opt/mediastack/config/homepage }
+
+services:
+  # === NETWORK & EDGE ===
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    environment:
+      - CF_API_EMAIL=${ACME_EMAIL}
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--ping=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/letsencrypt
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      <<: *arr-healthcheck
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_conf:/opt/adguardhome/conf
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "3000:3000/tcp"
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguard.rule=Host(`dns.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.adguard.entrypoints=websecure"
+      - "traefik.http.routers.adguard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.adguard.loadbalancer.server.port=80"
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER}
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${VPN_WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${VPN_WIREGUARD_ADDRESSES}
+      - FIREWALL_OUTBOUND_SUBNETS=${LAN_SUBNET}
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-healthcheck"]
+      <<: *arr-healthcheck
+
+  # === OPTIONAL MEDIA SERVERS (Run via Profiles) ===
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    profiles: ["plex"]
+    environment:
+      <<: *default-env
+      VERSION: docker
+    volumes:
+      - plex_config:/config
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 32400:32400
+    networks:
+      - mediastack_net
+    deploy: *deploy-heavy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:32400/identity"]
+      <<: *arr-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plex.rule=Host(`plex.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.plex.entrypoints=websecure"
+      - "traefik.http.routers.plex.tls.certresolver=letsencrypt"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    profiles: ["jellyfin"]
+    environment:
+      <<: *default-env
+    volumes:
+      - jellyfin_config:/config
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+    networks:
+      - mediastack_net
+    deploy: *deploy-heavy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+
+  emby:
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    profiles: ["emby"]
+    environment:
+      <<: *default-env
+    volumes:
+      - emby_config:/config
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+    networks:
+      - mediastack_net
+    deploy: *deploy-heavy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.tls.certresolver=letsencrypt"
+      - "traefik.http.services.emby.loadbalancer.server.port=8096"
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    profiles: ["plex"]
+    environment:
+      <<: *default-env
+    volumes:
+      - tautulli_config:/config
+      - plex_config:/plex_logs:ro
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      plex:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`stats.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tautulli.loadbalancer.server.port=8181"
+
+  # === DOWNLOADS ===
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      <<: *default-env
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent_config:/config
+      - /data/torrents:/data/torrents
+    network_mode: "service:gluetun"
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      <<: *arr-healthcheck
+
+  # === ACQUISITION ===
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      <<: *default-env
+    volumes:
+      - prowlarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      <<: *arr-healthcheck
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      <<: *default-env
+    volumes:
+      - radarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      <<: *arr-healthcheck
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      <<: *default-env
+    volumes:
+      - sonarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      <<: *arr-healthcheck
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      <<: *default-env
+    volumes:
+      - lidarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8686/ping"]
+      <<: *arr-healthcheck
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      <<: *default-env
+    volumes:
+      - readarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/ping"]
+      <<: *arr-healthcheck
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      <<: *default-env
+    volumes:
+      - bazarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6767/api/system/status"]
+      <<: *arr-healthcheck
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    environment:
+      <<: *default-env
+    volumes:
+      - seerr_config:/app/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+      <<: *arr-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.seerr.rule=Host(`requests.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.seerr.entrypoints=websecure"
+      - "traefik.http.routers.seerr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
+
+  # === PROCESSING & COMPANIONS ===
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - CAPTCHA_SOLVER=none
+    ports:
+      - "8191:8191"
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+
+  unpackerr:
+    image: golift/unpackerr:latest
+    container_name: unpackerr
+    user: ${PUID}:${PGID}
+    environment:
+      - TZ=${TZ}
+      - UN_FOLDERS_0_PATH=/data/torrents
+      - UN_SONARR_0_URL=http://sonarr:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_SONARR_0_PATHS_0=/data/torrents
+      - UN_RADARR_0_URL=http://radarr:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_RADARR_0_PATHS_0=/data/torrents
+      - UN_LIDARR_0_URL=http://lidarr:8686
+      - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
+      - UN_LIDARR_0_PATHS_0=/data/torrents
+      - UN_READARR_0_URL=http://readarr:8787
+      - UN_READARR_0_API_KEY=${READARR_API_KEY}
+      - UN_READARR_0_PATHS_0=/data/torrents
+    volumes:
+      - /data:/data
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+
+  fileflows:
+    image: revenz/fileflows:latest
+    container_name: fileflows
+    environment:
+      <<: *default-env
+    volumes:
+      - fileflows_config:/app/Data
+    networks:
+      - mediastack_net
+    deploy: *deploy-heavy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      <<: *arr-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fileflows.rule=Host(`process.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.fileflows.entrypoints=websecure"
+      - "traefik.http.routers.fileflows.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fileflows.loadbalancer.server.port=5000"
+
+  # === MONITORING & CONFIGURATION ===
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - prometheus_data:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - /opt/mediastack/config/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      <<: *arr-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`logs.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.dozzle.entrypoints=websecure"
+      - "traefik.http.routers.dozzle.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr
+    container_name: recyclarr
+    user: ${PUID}:${PGID}
+    environment:
+      - TZ=${TZ}
+      - CRON_SCHEDULE=@daily
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+    volumes:
+      - recyclarr_config:/config
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      <<: *default-env
+      - HOMEPAGE_VAR_DOMAIN_NAME=${DOMAIN_NAME}
+      - HOMEPAGE_VAR_RADARR_API_KEY=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_API_KEY=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_LIDARR_API_KEY=${LIDARR_API_KEY}
+      - HOMEPAGE_VAR_READARR_API_KEY=${READARR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_BAZARR_API_KEY=${BAZARR_API_KEY}
+      - HOMEPAGE_VAR_TAUTULLI_API_KEY=${TAUTULLI_API_KEY}
+    volumes:
+      - homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mediastack_net
+    deploy: *deploy-light
+    restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      <<: *arr-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy: *deploy-light
+    restart: unless-stopped
