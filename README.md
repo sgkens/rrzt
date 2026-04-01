@@ -1,93 +1,194 @@
-# rrzt
+# **RRZT** - MediaStack
 
+[![Mit License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge&logo=mit&logoColor=white)](https://github.com/rrzt-it/mediastack/blob/main/LICENSE) [![gitlab](https://img.shields.io/badge/GitLab-RRZT-black?style=for-the-badge&logo=gitlab&logoColor=white)](https://gitlab.com/rrzt-it/mediastack)
 
+> Zero-Touch Deployment Engine
 
-## Getting started
+Contains the declarative infrastructure and orchestration scripts for Rzzt It is a 100% automated, zero-touch media acquisition, processing, and telemetry environment built on Docker Compose and managed via PowerShell orchestrators.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+---
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+<p align="center">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&logo=powershell&logoColor=white" />
+  
+  <br>
 
-## Add your files
+  <img src="https://img.shields.io/badge/Traefik-24A1C1?style=for-the-badge&logo=traefik&logoColor=white" />
+  <img src="https://img.shields.io/badge/AdGuard_Home-68BC71?style=for-the-badge&logo=adguard&logoColor=white" />
+  <img src="https://img.shields.io/badge/WireGuard_(Gluetun)-881798?style=for-the-badge&logo=wireguard&logoColor=white" />
+  
+  <br>
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+  <img src="https://img.shields.io/badge/Plex-E5A00D?style=for-the-badge&logo=plex&logoColor=white" />
+  <img src="https://img.shields.io/badge/Jellyfin-00A4DC?style=for-the-badge&logo=jellyfin&logoColor=white" />
+  <img src="https://img.shields.io/badge/Emby-52B54B?style=for-the-badge&logo=emby&logoColor=white" />
+  
+  <br>
 
+  <img src="https://img.shields.io/badge/Prowlarr-FFC230?style=for-the-badge&logoColor=black" />
+  <img src="https://img.shields.io/badge/Radarr-FFC230?style=for-the-badge&logo=radarr&logoColor=black" />
+  <img src="https://img.shields.io/badge/Sonarr-89C3EB?style=for-the-badge&logo=sonarr&logoColor=black" />
+  <img src="https://img.shields.io/badge/Lidarr-00A4DC?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Readarr-E5A00D?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Bazarr-881798?style=for-the-badge&logoColor=white" />
+  
+  <br>
+
+  <img src="https://img.shields.io/badge/qBittorrent-2D72B8?style=for-the-badge&logo=qbittorrent&logoColor=white" />
+  <img src="https://img.shields.io/badge/FileFlows-2496ED?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Unpackerr-68BC71?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Seerr-E6522C?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/FlareSolverr-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" />
+  <img src="https://img.shields.io/badge/Recyclarr-2D72B8?style=for-the-badge&logoColor=white" />
+  
+  <br>
+
+  <img src="https://img.shields.io/badge/Homepage-24A1C1?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tautulli-121111?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" />
+  <img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" />
+  <img src="https://img.shields.io/badge/cAdvisor-2496ED?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/Dozzle-FFC230?style=for-the-badge&logoColor=black" />
+  <img src="https://img.shields.io/badge/Watchtower-5391FE?style=for-the-badge&logoColor=white" />
+</p>
+
+---
+
+## 1. **Architecture Overview**
+
+■ **Edge Routing**: Traefik (Auto-discovery, Let's Encrypt TLS).
+■ **Privacy & DNS**: Gluetun (Wireguard killswitch) and AdGuard Home (Split-horizon DNS).
+■ **Acquisition Suite**: Prowlarr, Radarr, Sonarr, Lidarr, Readarr, Bazarr.
+■ **Companions**: FlareSolverr (Cloudflare bypass), Unpackerr (Automated extraction).
+■ **Processing**: FileFlows (Node-based media transcoding).
+■ **Playback & Requests**: Plex, Jellyfin, Emby (Deployed via Compose Profiles), Seerr.
+■ **Telemetry & Logs**: Grafana (cAdvisor/Prometheus), Tautulli, Dozzle, Homepage.
+
+---
+
+## 2. **Repository Structure**
+
+Clone this repository to `/opt/mediastack` on your target Docker host. The infrastructure relies on this exact directory tree.
+
+```text
+/opt/mediastack/
+├── .env                          # Environment variables and dynamic API keys
+├── docker-compose.yml            # Base declarative infrastructure
+├── libraries.json                # Single source of truth for storage arrays
+├── deploy.ps1                    # Primary TUI deployment orchestrator
+├── verify.ps1                    # Pre-flight syntax and dependency validation
+├── init-stack.sh                 # Internal API configuration payload
+├── backup-stack.sh               # Atomic tar/rsync disaster recovery
+├── Set-MediaVolumes.ps1          # Dynamic YAML override generator
+├── Test-ContainerPaths.ps1       # Filesystem access validation
+└── config/
+    ├── traefik/acme.json
+    ├── prometheus/prometheus.yml
+    ├── grafana/provisioning/
+    ├── recyclarr/recyclarr.yml
+    └── homepage/
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/phellams/rrzt.git
-git branch -M main
-git push -uf origin main
+
+---
+
+## 3. **Host System Prerequisites**
+
+### 3.1. OS & Packages
+The host must run a standard Linux distribution with Docker Engine, Docker Compose plugin, and PowerShell Core (`pwsh`) installed.
+
+### 3.2. Hardware Acceleration (GPU)
+To utilize hardware transcoding in Plex, Jellyfin, Emby, or FileFlows, install the corresponding host drivers:
+◆ **Intel/AMD**: `intel-media-va-driver-non-free` or `mesa-va-drivers`. The stack maps `/dev/dri` natively.
+◆ **NVIDIA**: Install the `nvidia-container-toolkit` and uncomment the `deploy.resources.reservations.devices` blocks in `docker-compose.yml`.
+
+### 3.3. Log Rotation
+Prevent Docker from consuming all host inodes. Create `/etc/docker/daemon.json` and restart the Docker daemon:
+```json
+{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3", "compress": "true" }
+}
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://gitlab.com/phellams/rrzt/-/settings/integrations)
+## 4. **Configuration**
 
-## Collaborate with your team
+Do not manually edit the `docker-compose.yml` file to add storage paths. Storage is managed entirely via JSON abstraction.
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Step 1: Define Environment Variables
+Edit `/opt/mediastack/.env`. Provide your domain, Wireguard keys, and internal IP. **Leave all `_API_KEY` variables blank.**
 
-## Test and Deploy
+### *Step 2: Define Storage Arrays*
+Edit `/opt/mediastack/libraries.json`. Map your physical host disks to their target categories. The orchestrator will dynamically generate the `docker-compose.override.yml` at deployment.
 
-Use the built-in continuous integration in GitLab.
+```json
+[
+  {
+    "Tags": ["radarr", "bazarr", "plex", "fileflows"],
+    "Source": "/mnt/disk1/movies",
+    "Target": "/data/media/movies",
+    "Category": "movies"
+  }
+]
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+---
 
-***
+## 5. **Deployment Pipeline**
 
-# Editing this README
+Execution of the stack is handled entirely by the PowerShell orchestrators. Do not use raw `docker compose` commands for initial deployment.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Phase 1: Pre-Flight Validation
+Execute the verification script to ensure all JSON/YAML syntax is valid and required configuration directories exist.
+```bash
+pwsh /opt/mediastack/verify.ps1
+```
 
-## Suggestions for a good README
+### Phase 2: Zero-Touch Deployment
+Execute the deployment orchestrator. This script compiles the volumes, boots the stack, waits for API readiness, injects the routing payloads, extracts the API keys, and validates the storage mounts.
+```bash
+pwsh /opt/mediastack/deploy.ps1
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Phase 3: Split-Horizon DNS (Post-Deploy)
+Access AdGuard Home at port `3000` to complete the setup wizard. Set the web interface to port `80`. Apply the internal DNS rewrite rule to bypass hairpin NAT:
+```bash
+curl -X POST http://<HOST_IP>/control/rewrite/add \
+  -H "Authorization: Basic <base64_admin:password>" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"*.yourdomain.com","answer":"<HOST_IP>"}'
+```
 
-## Name
-Choose a self-explaining name for your project.
+---
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## 6. **Operations & Telemetry**
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Access the infrastructure via your defined `DOMAIN_NAME` (e.g., `https://home.yourdomain.com`). 
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+■ **Application Logs**: `https://logs.yourdomain.com` (Dozzle multiplexes STDOUT/STDERR directly from the Docker socket).
+■ **Resource Metrics**: `https://grafana.yourdomain.com` (Pre-provisioned with cAdvisor dashboards enforcing CPU/Memory limits).
+■ **Disaster Recovery**: A cron job should be configured to execute `/opt/mediastack/backup-stack.sh` daily at `03:00`. This script freezes container I/O to safely archive SQLite databases without WAL corruption.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+---
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## **Detailed API Reference: docs**
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+This repository relies on direct API manipulation to enforce Configuration as Code. Maintainers should reference these execution paths when modifying the stack.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### 1. Pre-Deployment Configuration Merging (Docker CLI)
+When `deploy.ps1` executes `Set-MediaVolumes.ps1`, it generates `docker-compose.override.yml`. The Docker Engine API (`POST /v1.43/containers/create`) natively intercepts this override file. It recursively merges dictionaries (like `environment` labels) but strictly **concatenates lists** (like `volumes`). This guarantees the base `/config` mounts are never overwritten by the dynamic storage overrides.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### 2. Zero-Touch Bootstrapping (`init-stack.sh`)
+The orchestrator avoids host-level dependencies (like `jq`) by executing JSON parsing natively via Python 3, which is piped into standard bash functions. 
+● **Idempotency**: Every `POST` request sent to a container's REST API is preceded by a `GET` request to verify the state. This ensures `deploy.ps1` can be run infinitely without duplicating download clients or indexer proxies in the *Arr databases.
+● **Key Extraction**: Exec instances (`POST /containers/{id}/exec`) are spawned inside the Alpine containers using `sed` and `awk` to extract generated API keys from XML and INI files directly into host memory, bypassing the need for manual UI retrieval.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### 3. TUI Rendering Engine (`deploy.ps1` / `verify.ps1`)
+The PowerShell scripts utilize strict ANSI 256-color escape sequences (`\e[38;5;Nm`). To prevent terminal grid tearing across different Linux emulator widths, padding length calculations (`$TargetWidth - $ConstructedString.Length`) are performed against the raw text payload **before** the ANSI color bytes are encapsulated around the string.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# **License**
 
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
