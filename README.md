@@ -113,12 +113,15 @@ Prevent Docker from consuming all host inodes. Create `/etc/docker/daemon.json` 
 
 ---
 
-## 4. **Configuration**
+## 4. **Security & Configuration**
 
 Do not manually edit the `docker-compose.yml` file to add storage paths. Storage is managed entirely via JSON abstraction.
 
+### ⚠️ Security First
+> 🟥 **CHANGE IMMEDIATELY:** The default orchestration configures `qBittorrent` and `Homepage` using default credentials (`admin` / `adminadmin`). **You must change these via their respective web interfaces immediately after deployment.**
+
 ### Step 1: Define Environment Variables
-Edit `/opt/mediastack/.env`. Provide your domain, Wireguard keys, and internal IP. **Leave all `_API_KEY` variables blank.**
+Edit `/opt/mediastack/.env`. Provide your domain, Wireguard keys, and internal IP. You may also provide override variables for the backup script (`BACKUP_REMOTE_HOST`, `BACKUP_REMOTE_USER`, etc.). **Leave all `_API_KEY` variables blank.**
 
 ### *Step 2: Define Storage Arrays*
 Edit `/opt/mediastack/libraries.json`. Map your physical host disks to their target categories. The orchestrator will dynamically generate the `docker-compose.override.yml` at deployment.
